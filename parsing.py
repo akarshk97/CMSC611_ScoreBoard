@@ -18,6 +18,12 @@ adderUnit = []
 multUnit = []
 divUnit = []
 cache = []
+functionUnits = {}
+functionUnits.update(adderDict)
+functionUnits.update(multDict)
+functionUnits.update(divDict)
+functionUnits['integer'] = 0
+functionUnits['data'] = 0
 
 
 class Instruction:
@@ -145,11 +151,6 @@ def readInst():
 # for i in instList:
 #     print(vars(i))
 
-form = Config('integer', 1, 1)
-intDict1 = {'integer' : form}
-
-form = Config('data', 1, 1)
-dataDict1 = {'data' : form}
 
 
 dictRegister = {}
@@ -173,24 +174,26 @@ def issue(q,clockTime):
     if len(q) == 0:
         return False
     obj = q[0]
-    if((obj.instType.upper() in ['DADD', 'DADDI', 'DSUB', 'DSUBI', 'AND', 'ANDI', 'OR', 'ORI', 'LI', 'LUI']) and (0 in intDict.values()) and (obj.dest not in dictRegister or dictRegister[obj.dest] != 1)):
-        for i in intDict.keys():
-            if intDict[i] == 0:
-                intDict[i] = 1
-                break
+    if((obj.instType.upper() in ['DADD', 'DADDI', 'DSUB', 'DSUBI', 'AND', 'ANDI', 'OR', 'ORI', 'LI', 'LUI']) and (intDict['integer']==0) and (obj.dest not in dictRegister or dictRegister[obj.dest] != 1)):
+        # for i in intDict.keys():
+        #     if intDict[i] == 0:
+        #         intDict[i] = 1
+        #         break
         #integerUnit = 1
-        obj.unitType = intDict
+        intDict['integer'] = 1
+        obj.unitType = 'integer'
         dictRegister[obj.dest] = 1
         obj.issue_time = clockTime
         readQueue.append(issueQueue.pop())
 
         
-    elif((obj.instType.upper() in ['LW', 'SW','L.D', 'S.D']) and (0 in dataDict.values()) and (obj.dest not in dictRegister or dictRegister[obj.dest] != 1)):
-        for i in dataDict.keys():
-            if dataDict[i] == 0:
-                dataDict[i] = 1
-                break
-        obj.unitType = dataDict
+    elif((obj.instType.upper() in ['LW', 'SW','L.D', 'S.D']) and (dataDict['data']==0) and (obj.dest not in dictRegister or dictRegister[obj.dest] != 1)):
+        # for i in dataDict.keys():
+        #     if dataDict[i] == 0:
+        #         dataDict[i] = 1
+        #         break
+        dataDict['data']=1
+        obj.unitType = 'data'
         dictRegister[obj.dest] = 1
         #print(dictRegister)
         obj.issue_time = clockTime
@@ -200,7 +203,7 @@ def issue(q,clockTime):
         for i in adderDict.keys():
             if adderDict[i] == 0:
                 adderDict[i] = 1
-                obj.unitType = adderDict[i]
+                obj.unitType = 'adder'
                 break
         
         dictRegister[obj.dest] = 1
@@ -212,7 +215,7 @@ def issue(q,clockTime):
         for i in multDict.keys():
             if multDict[i] ==0:
                 multDict[i] = 1
-                obj.unitType = multDict[i]
+                obj.unitType = 'mult'
                 break
         dictRegister[obj.dest] = 1
         obj.issue_time = clockTime
@@ -221,7 +224,7 @@ def issue(q,clockTime):
     elif((obj.instType.upper() in ['DIV.D']) and (0 in divDict.values()) and (obj.dest not in dictRegister or dictRegister[obj.dest] != 1)):
         for i in divDict.keys():
             if divDict[i] == 0:
-                obj.unitType = divDict[i]
+                obj.unitType = 'div'
                 divDict[i] = 1
                 break
         dictRegister[obj.dest] = 1
@@ -271,9 +274,28 @@ def wb(q, clockTime):
     obj = q[0]
     obj.wb_time = clockTime
     dictRegister[obj.dest] = 0
-    obj.unitType
+    obj.unitType == 'adder'
+    for i in adderDict.keys():
+        if adderDict[i] == 1:
+            adderDict[i] = 0
+            break
+    obj.unitType == 'mult'
+    for i in multDict.keys():
+        if multDict[i] == 1:
+            multDict[i] = 0
+            break
+    obj.unitType == 'div'
+    for i in divDict.keys():
+        if divDict[i] == 1:
+            divDict[i] = 0
+            break
+    obj.unitType == 'integer'
+    intDict['integer'] = 0
+    obj.unitType == 'data'
+    intDict['data'] = 0
+
+    print(obj.fetch_time,obj.issue_time,obj.read_time,obj.exec_end_time,obj.wb_time)
     wbQueue.pop()
-    print(vars(obj))
 
 def mips_simulator():
     instList = readInst()
