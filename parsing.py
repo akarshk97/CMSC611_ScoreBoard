@@ -35,6 +35,8 @@ class Instruction:
         self.s2 = s2
         self.branch = branch
         self.unitType = 0
+        self.s1offset = 0
+        self.s2offset = 0
         self.fetch_time=0
         self.issue_time = 0
         self.read_time = 0
@@ -116,47 +118,81 @@ def readInst():
         # creating instruction objects using len of the list
         if(':' in i[0]):
             if(len(i)==5):
+
+                s1offset = 0
+                s2offset = 0
                 branch = i[0]
                 instType = i[1]
                 dest = i[2]
-                s1 = i[3]
-                s2 = i[4]
+                if '(' in i[3] :
+                    s1offset = i[3][0:i[3].index('(')]
+                    s1 = i[3][-3:-1]
+                else:
+                    s1 = i[3]
+                if '(' in i[4] :
+                    s2offset = i[4][0:i[3].index('(')]
+                    s2 = i[4][-3:-1]
+                else:
+                    s2 = i[4]
                 obj = Instruction(x, instType, dest, s1, s2, branch)
+                obj.s1offset = s1offset
+                obj.s2offset = s2offset
+
                 instList.append(obj)
             elif(len(i)==4):
+                s1offset = 0
                 branch = i[0]
                 instType = i[1]
                 dest = i[2]
-                s1 = i[3]
+                if '(' in i[3] :
+                    s1offset = i[3][0:i[3].index('(')]
+                    s1 = i[3][-3:-1]
+                else:
+                    s1 = i[3]
+                #obj.s2offset = s2offset
                 obj = Instruction(x, instType, dest, s1, None,branch)
+                obj.s1offset = s1offset
                 instList.append(obj)    
         elif(len(i)==3):
+            s1offset=0
             instType = i[0]
             dest = i[1]
-            s1 = i[2]
+            #s1 = i[2]
+            if '(' in i[2] :
+                s1offset = i[2][0:i[2].index('(')]
+                s1 = i[2][-3:-1]
+            else:
+                s1 = i[2]
             obj = Instruction(x, instType, dest, s1)
+            obj.s1offset = s1offset
             instList.append(obj)
         elif(len(i)==4):
+            s1offset = 0
+            s2offset = 0
             instType = i[0]
             dest = i[1]
-            s1 = i[2]
-            s2 = i[3]
-            instList.append(Instruction(x, instType, dest, s1, s2))
+            # s1 = i[2]
+            # s2 = i[3]
+            if '(' in i[2] :
+                s1offset = i[2][0:i[3].index('(')]
+                s1 = i[2][-3:-1]
+            else:
+                s1 = i[2]
+            if '(' in i[3] :
+                s2offset = i[3][0:i[3].index('(')]
+                s2 = i[3][-3:-1]
+            else:
+                s2 = i[3]
+            obj = Instruction(x, instType, dest, s1, s2)
+            obj.s1offset = s1offset
+            obj.s2offset = s2offset
+            instList.append(obj)
         elif(len(i) == 1):
             instType = i[0]
             instList.append(Instruction(x, instType))
     return instList
 
-#instList = readInst()
-# for i in instList:
-#     print(vars(i))
-
-
-
 dictRegister = {}
-
-
-
 
 def fetch(obj, clockTime):
     if(len(issueQueue) == 0):
@@ -164,10 +200,6 @@ def fetch(obj, clockTime):
         obj.fetch_time = clockTime
         return True
     return False
-
-
-
-
 
 def issue(q,clockTime):
     
@@ -261,10 +293,10 @@ def exec(q, clockTime):
         latency = multUnit[0].latency
     elif((obj.instType.upper() in ['DIV.D']) ):
         latency = divUnit[0].latency
-    
+    #print(clockTime)
     if obj.exec_start_time == 0:
         obj.exec_start_time = clockTime
-    if(clockTime - obj.exec_start_time == latency):
+    if(clockTime - obj.exec_start_time == latency-1):
         obj.exec_end_time = clockTime
         wbQueue.append(executeQueue.pop())
 
@@ -291,6 +323,7 @@ def wb(q, clockTime):
             break
     obj.unitType == 'integer'
     intDict['integer'] = 0
+
     obj.unitType == 'data'
     intDict['data'] = 0
 
@@ -299,20 +332,35 @@ def wb(q, clockTime):
 
 def mips_simulator():
     instList = readInst()
-    # for i in instList:
-    #     print(vars(i))
+    for i in instList:
+        print(vars(i))
     # print(len(instList))
     # print(instList[0])
     i=0
     cc = 1
     while cc < 500:
-        wb(wbQueue, cc)
-        exec(executeQueue, cc)
-        read(readQueue, cc)
-        issue(issueQueue, cc)
+        try:
+            wb(wbQueue, cc)
+        except:
+            print('error in wb')
+        try:
+            exec(executeQueue, cc)
+        except:
+            print('error in executeQueue')
 
-        if fetch(instList[i], cc) == True :
-            i += 1
+        try:
+            read(readQueue, cc)
+        except:
+            print('error in readQueue')
+        try:
+            issue(issueQueue, cc)
+        except:
+            print('error in issueQueue')
+        try:
+            if fetch(instList[i], cc) == True :
+                i += 1
+        except:
+            print('error in fetching ')
         cc += 1
 
 if __name__ == '__main__':
